@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <title>AltTime</title>
+  <style>
+    * { margin: 0; padding: 0; -webkit-box-sizing: border-box; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
+
+    body {
+      background: #0a0a0a;
+      color: #fff;
+      font-family: 'LG Display', 'Helvetica Neue', Arial, sans-serif;
+      width: 1920px;
+      height: 1080px;
+      overflow: hidden;
+      padding: 80px 100px;
+    }
+
+    h1 {
+      font-size: 52px;
+      font-weight: 300;
+      letter-spacing: 2px;
+      color: #90CAF9;
+      margin-bottom: 40px;
+    }
+
+    h1 span { color: #fff; font-weight: 600; }
+
+    .row {
+      display: -webkit-box;
+      display: -webkit-flex;
+      display: flex;
+      -webkit-flex-wrap: wrap;
+      flex-wrap: wrap;
+      margin-bottom: 30px;
+      gap: 30px;
+    }
+
+    .card {
+      background: #1a1a2e;
+      border: 2px solid #1e3a5f;
+      -webkit-border-radius: 16px;
+      border-radius: 16px;
+      padding: 36px 50px;
+      -webkit-box-flex: 1;
+      -webkit-flex: 1;
+      flex: 1;
+      min-width: 400px;
+    }
+
+    .card-label {
+      font-size: 22px;
+      color: #90CAF9;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .card-value { font-size: 48px; font-weight: 300; }
+    .card-value.small { font-size: 30px; }
+
+    .dot {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      -webkit-border-radius: 50%;
+      border-radius: 50%;
+      margin-right: 12px;
+      vertical-align: middle;
+    }
+
+    .dot-green  { background: #4CAF50; }
+    .dot-red    { background: #F44336; }
+    .dot-yellow { background: #FFC107; }
+
+    .actions {
+      display: -webkit-box;
+      display: -webkit-flex;
+      display: flex;
+      gap: 30px;
+      margin-bottom: 24px;
+      -webkit-flex-wrap: wrap;
+      flex-wrap: wrap;
+    }
+
+    button {
+      background: #1565C0;
+      color: #fff;
+      border: 3px solid transparent;
+      -webkit-border-radius: 12px;
+      border-radius: 12px;
+      padding: 24px 50px;
+      font-size: 30px;
+      font-weight: 600;
+      cursor: pointer;
+      outline: none;
+      min-width: 280px;
+    }
+
+    button:focus {
+      border-color: #90CAF9;
+      background: #1976D2;
+    }
+
+    button.danger { background: #B71C1C; }
+    button.danger:focus { background: #C62828; border-color: #EF9A9A; }
+
+    button.provider { background: #263238; min-width: 220px; font-size: 26px; padding: 18px 36px; }
+    button.provider:focus { background: #37474F; border-color: #90CAF9; }
+    button.provider.selected { background: #1565C0; border-color: #42A5F5; }
+    button.provider.selected:focus { background: #1976D2; }
+
+    .provider-label {
+      font-size: 22px;
+      color: #90CAF9;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .log {
+      background: #111;
+      border: 1px solid #333;
+      -webkit-border-radius: 8px;
+      border-radius: 8px;
+      padding: 16px 24px;
+      font-size: 20px;
+      color: #aaa;
+      font-family: monospace;
+      min-height: 56px;
+    }
+
+    .log-ok   { color: #4CAF50; border-color: #2E7D32; }
+    .log-err  { color: #F44336; border-color: #B71C1C; }
+    .log-busy { color: #FFC107; border-color: #F9A825; }
+
+    #time-display { font-size: 68px; }
+  </style>
+</head>
+<body>
+
+  <h1>Alt<span>Time</span></h1>
+
+  <div class="row">
+    <div class="card">
+      <div class="card-label">Current Time</div>
+      <div class="card-value" id="time-display">--:--:--</div>
+      <div class="card-value small" id="date-display" style="color:#90CAF9;margin-top:8px;">Loading...</div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Startup Script</div>
+      <div>
+        <span class="dot dot-yellow" id="script-dot"></span>
+        <span class="card-value small" id="script-status">Checking...</span>
+      </div>
+      <div style="font-size:18px;color:#555;margin-top:10px;">/var/lib/webosbrew/init.d/set-time</div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">Last Sync</div>
+      <div class="card-value small" id="last-sync">Never this session</div>
+    </div>
+  </div>
+
+  <div class="provider-label">Time Provider</div>
+  <div class="actions" id="provider-row">
+    <button class="provider selected" id="prov-cloudflare" tabindex="1">Cloudflare</button>
+    <button class="provider"          id="prov-google"     tabindex="2">Google</button>
+    <button class="provider"          id="prov-timeapi"    tabindex="3">TimeAPI.io</button>
+  </div>
+
+  <div class="actions">
+    <button id="btn-sync"    tabindex="4">Sync Time Now</button>
+    <button id="btn-install" tabindex="5">Install Startup Script</button>
+    <button id="btn-remove" class="danger" tabindex="6" style="display:none">Remove Startup Script</button>
+  </div>
+
+  <div class="log" id="log">Ready.</div>
+
+  <script>
+    var SCRIPT_PATH = '/var/lib/webosbrew/init.d/set-time';
+
+    // Startup script tries all three providers in fallback order
+    var SCRIPT_CONTENT =
+      '#!/bin/sh\n' +
+      '# webos-time-setter: sync system clock on boot\n' +
+      'get_ts() {\n' +
+      '    TS=$(curl -s -k --max-time 10 https://1.1.1.1/cdn-cgi/trace 2>/dev/null | grep \'^ts=\' | cut -d= -f2 | cut -d. -f1)\n' +
+      '    [ -n "$TS" ] && [ "$TS" -gt 1577836800 ] && echo "$TS" && return\n' +
+      '    TS=$(curl -sI -k --max-time 10 https://www.google.com 2>/dev/null | awk \'/^[Dd]ate:/{split($5,t,":");m=index("JanFebMarAprMayJunJulAugSepOctNovDec",$4);mo=int((m+2)/3);d=$2+0;y=$3+0;if(mo<=2){mo+=12;y--};print int((365*y+int(y/4)-int(y/100)+int(y/400)+int(30.6001*(mo+1))+d-719591)*86400+t[1]*3600+t[2]*60+t[3])}\')\n' +
+      '    [ -n "$TS" ] && [ "$TS" -gt 1577836800 ] && echo "$TS" && return\n' +
+      '    TS=$(curl -s -k --max-time 10 https://timeapi.io/api/v1/time/current/unix 2>/dev/null | grep -o \'[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]\' | head -1)\n' +
+      '    [ -n "$TS" ] && [ "$TS" -gt 1577836800 ] && echo "$TS"\n' +
+      '}\n' +
+      'TS=$(get_ts)\n' +
+      'if [ -n "$TS" ] && [ "$TS" -gt 1577836800 ]; then\n' +
+      '    luna-send -a webosbrew -n 1 luna://com.webos.service.systemservice/time/setSystemTime "{\\"utc\\":$TS}"\n' +
+      'else\n' +
+      '    (sleep 20 && /var/lib/webosbrew/init.d/set-time) &\n' +
+      'fi\n';
+
+    // Provider definitions: name, fetch command (outputs unix timestamp to stdout)
+    var PROVIDERS = [
+      {
+        id: 'cloudflare',
+        name: 'Cloudflare',
+        cmd: "curl -s -k --max-time 10 https://1.1.1.1/cdn-cgi/trace | grep '^ts=' | cut -d= -f2 | cut -d. -f1"
+      },
+      {
+        id: 'google',
+        name: 'Google',
+        cmd: "curl -sI -k --max-time 10 https://www.google.com 2>/dev/null | awk '/^[Dd]ate:/{split($5,t,\":\");m=index(\"JanFebMarAprMayJunJulAugSepOctNovDec\",$4);mo=int((m+2)/3);d=$2+0;y=$3+0;if(mo<=2){mo+=12;y--};print int((365*y+int(y/4)-int(y/100)+int(y/400)+int(30.6001*(mo+1))+d-719591)*86400+t[1]*3600+t[2]*60+t[3])}'"
+      },
+      {
+        id: 'timeapi',
+        name: 'TimeAPI.io',
+        cmd: "curl -s -k --max-time 10 https://timeapi.io/api/v1/time/current/unix | grep -o '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' | head -1"
+      }
+    ];
+
+    var selectedProvider = 0; // index into PROVIDERS
+
+    // ── Luna service bridge ───────────────────────────────────────────────────
+    function lunaCall(uri, params, onSuccess, onError) {
+      try {
+        var bridge = new WebOSServiceBridge();
+        var done = false;
+        bridge.onservicecallback = function(msg) {
+          if (done) return;
+          done = true;
+          var r = JSON.parse(msg);
+          if (r.returnValue === false) {
+            if (onError) onError(r);
+          } else {
+            if (onSuccess) onSuccess(r);
+          }
+        };
+        bridge.call(uri, JSON.stringify(params || {}));
+      } catch (e) {
+        if (onError) onError({ errorText: e.message });
+      }
+    }
+
+    function execCommand(cmd, onSuccess, onError) {
+      lunaCall('luna://org.webosbrew.hbchannel.service/exec', { command: cmd }, onSuccess, onError);
+    }
+
+    // ── UI helpers ────────────────────────────────────────────────────────────
+    var logEl = document.getElementById('log');
+    function setLog(msg, cls) {
+      logEl.textContent = msg;
+      logEl.className = 'log' + (cls ? ' log-' + cls : '');
+    }
+
+    // ── Provider selection ────────────────────────────────────────────────────
+    function selectProvider(idx) {
+      selectedProvider = idx;
+      var btns = document.getElementById('provider-row').querySelectorAll('button');
+      for (var i = 0; i < btns.length; i++) {
+        if (i === idx) {
+          btns[i].className = 'provider selected';
+        } else {
+          btns[i].className = 'provider';
+        }
+      }
+    }
+
+    document.getElementById('prov-cloudflare').addEventListener('click', function() { selectProvider(0); });
+    document.getElementById('prov-google').addEventListener('click',     function() { selectProvider(1); });
+    document.getElementById('prov-timeapi').addEventListener('click',    function() { selectProvider(2); });
+
+    // ── Clock display ─────────────────────────────────────────────────────────
+    function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+    function updateClock() {
+      var now = new Date();
+      document.getElementById('time-display').textContent =
+        pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+      var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      var months = ['January','February','March','April','May','June',
+                    'July','August','September','October','November','December'];
+      document.getElementById('date-display').textContent =
+        days[now.getDay()] + ', ' + months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ── Script install status ─────────────────────────────────────────────────
+    function checkScriptInstalled(callback) {
+      execCommand('test -x ' + SCRIPT_PATH,
+        function() {
+          document.getElementById('script-status').textContent = 'Installed';
+          document.getElementById('script-dot').className = 'dot dot-green';
+          document.getElementById('btn-install').style.display = 'none';
+          document.getElementById('btn-remove').style.display = '';
+          if (callback) callback(true);
+        },
+        function() {
+          document.getElementById('script-status').textContent = 'Not installed';
+          document.getElementById('script-dot').className = 'dot dot-red';
+          document.getElementById('btn-install').style.display = '';
+          document.getElementById('btn-remove').style.display = 'none';
+          if (callback) callback(false);
+        }
+      );
+    }
+    checkScriptInstalled(null);
+
+    // ── Sync time now ─────────────────────────────────────────────────────────
+    document.getElementById('btn-sync').addEventListener('click', function() {
+      var prov = PROVIDERS[selectedProvider];
+      setLog('Fetching time from ' + prov.name + '...', 'busy');
+      execCommand(prov.cmd,
+        function(result) {
+          var ts = parseInt((result.stdoutString || '').trim(), 10);
+          if (!ts || ts < 1577836800) {
+            setLog('Invalid timestamp from ' + prov.name + ': "' + (result.stdoutString || '').trim() + '"', 'err');
+            return;
+          }
+          execCommand('luna-send -a webosbrew -n 1 luna://com.webos.service.systemservice/time/setSystemTime \'{"utc":' + ts + '}\'',
+            function() {
+              var now = new Date();
+              document.getElementById('last-sync').textContent =
+                prov.name + ' at ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+              setLog('Time synced via ' + prov.name + '.', 'ok');
+            },
+            function(e) { setLog('setSystemTime failed: ' + (e.errorText || e.stderrString || ''), 'err'); }
+          );
+        },
+        function(e) { setLog('Fetch failed (' + prov.name + '): ' + (e.errorText || e.stderrString || ''), 'err'); }
+      );
+    });
+
+    // ── Install startup script ────────────────────────────────────────────────
+    document.getElementById('btn-install').addEventListener('click', function() {
+      setLog('Installing startup script...', 'busy');
+      var b64 = btoa(SCRIPT_CONTENT);
+      execCommand("printf '%s' '" + b64 + "' | base64 -d > " + SCRIPT_PATH + " && chmod +x " + SCRIPT_PATH,
+        function() {
+          checkScriptInstalled(null);
+          setLog('Startup script installed. Time will sync on every boot.', 'ok');
+        },
+        function(e) { setLog('Install failed: ' + (e.errorText || e.stderrString || ''), 'err'); }
+      );
+    });
+
+    // ── Remove startup script ─────────────────────────────────────────────────
+    document.getElementById('btn-remove').addEventListener('click', function() {
+      setLog('Removing startup script...', 'busy');
+      execCommand('rm -f ' + SCRIPT_PATH,
+        function() {
+          checkScriptInstalled(null);
+          setLog('Startup script removed.', 'ok');
+        },
+        function(e) { setLog('Remove failed: ' + (e.errorText || ''), 'err'); }
+      );
+    });
+
+    // ── Remote control navigation ─────────────────────────────────────────────
+    function getFocusable() {
+      var all = document.querySelectorAll('button');
+      var visible = [];
+      for (var i = 0; i < all.length; i++) {
+        if (all[i].style.display !== 'none') visible.push(all[i]);
+      }
+      return visible;
+    }
+
+    document.addEventListener('keydown', function(e) {
+      var code = e.keyCode;
+      if (code === 461 || code === 27) {
+        if (typeof webOSSystem !== 'undefined') webOSSystem.back();
+        return;
+      }
+      if (code === 13) {
+        if (document.activeElement) document.activeElement.click();
+        return;
+      }
+      if (code === 37 || code === 39) {
+        var items = getFocusable();
+        var idx = -1;
+        for (var i = 0; i < items.length; i++) {
+          if (items[i] === document.activeElement) { idx = i; break; }
+        }
+        if (idx === -1) { if (items[0]) items[0].focus(); return; }
+        var next = code === 39 ? items[idx + 1] : items[idx - 1];
+        if (next) next.focus();
+      }
+    });
+
+    window.addEventListener('load', function() {
+      var items = getFocusable();
+      if (items.length) items[0].focus();
+    });
+  </script>
+</body>
+</html>

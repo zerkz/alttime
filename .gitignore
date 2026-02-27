@@ -1,0 +1,17 @@
+# Build output
+build/
+*.ipk
+*.tar.gz
+
+# macOS
+.DS_Store
+
+# Node / ares-cli toolchain (if added later)
+node_modules/
+dist/
+.npm
+*.log
+
+# Editor
+.vscode/
+*.swp
