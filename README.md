@@ -2,6 +2,8 @@
 
 A webOS app that syncs the system clock via alternate HTTPS sources. This is useful if your network environment is blocking whatever WebOS was using to set time.
 
+<img width="1236" height="694" alt="image" src="https://github.com/user-attachments/assets/b704cf9e-6a75-4be4-92b7-4f0c1348c820" />
+
 ## TV Requirements
 
 - Rooted webOS TV (via RootMyTV or similar)
