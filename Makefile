@@ -1,5 +1,5 @@
 APP_ID      := org.zdware.alttime
-VERSION     := 0.1.0
+VERSION     := $(shell python3 -c "import json; print(json.load(open('app/appinfo.json'))['version'])")
 ARCH        := all
 IPK         := $(APP_ID)_$(VERSION)_$(ARCH).ipk
 
