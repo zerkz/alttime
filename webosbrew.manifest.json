@@ -1,0 +1,14 @@
+{
+  "id": "org.zdware.alttime",
+  "version": "1.1.0",
+  "type": "web",
+  "title": "AltTime",
+  "appDescription": "Syncs system clock via alternate HTTPS sources.",
+  "iconUri": "https://github.com/zerkz/alttime/raw/main/app/icon.png",
+  "sourceUrl": "https://github.com/zerkz/alttime",
+  "rootRequired": true,
+  "ipkUrl": "org.zdware.alttime_1.1.0_all.ipk",
+  "ipkHash": {
+    "sha256": "673ec6d37099984593da4ec8e88dd04347d558095e8539513602451c93ae7a66"
+  }
+}

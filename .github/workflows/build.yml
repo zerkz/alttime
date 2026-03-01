@@ -8,6 +8,8 @@ on:
 
 jobs:
   build:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,8 +23,34 @@ jobs:
           name: alttime-ipk
           path: "*.ipk"
 
+      - name: Generate webosbrew manifest
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          IPK="org.zdware.alttime_${VERSION}_all.ipk"
+          SHA256=$(sha256sum "$IPK" | awk '{print $1}')
+          jq -n \
+            --arg id "org.zdware.alttime" \
+            --arg version "$VERSION" \
+            --arg ipkUrl "$IPK" \
+            --arg sha256 "$SHA256" \
+            '{
+              id: $id,
+              version: $version,
+              type: "web",
+              title: "AltTime",
+              appDescription: "Syncs system clock via alternate HTTPS sources.",
+              iconUri: "https://github.com/zerkz/alttime/raw/main/app/icon.png",
+              sourceUrl: "https://github.com/zerkz/alttime",
+              rootRequired: true,
+              ipkUrl: $ipkUrl,
+              ipkHash: { sha256: $sha256 }
+            }' > webosbrew.manifest.json
+
       - name: Create release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: "*.ipk"
+          files: |
+            *.ipk
+            webosbrew.manifest.json

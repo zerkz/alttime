@@ -5,9 +5,9 @@
   "main": "index.html",
   "icon": "icon.png",
   "largeIcon": "largeIcon.png",
-  "version": "0.1.0",
+  "version": "1.2.0",
   "vendor": "zdware",
-  "appDescription": "Syncs system clock via alternate HTTPS sources, bypassing LG SDP",
+  "appDescription": "Syncs system clock via alternate HTTPS sources.",
   "resolution": "1920x1080",
   "iconColor": "#1565C0"
 }

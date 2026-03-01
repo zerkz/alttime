@@ -1,5 +1,5 @@
 APP_ID      := org.zdware.alttime
-VERSION     := 0.1.0
+VERSION     := $(shell python3 -c "import json; print(json.load(open('app/appinfo.json'))['version'])")
 ARCH        := all
 IPK         := $(APP_ID)_$(VERSION)_$(ARCH).ipk
 
@@ -10,12 +10,12 @@ DATA_DIR    := $(BUILD_DIR)/data
 
 all: $(IPK)
 
-$(IPK): app/appinfo.json app/index.html app/icon.png app/largeIcon.png
+$(IPK): app/appinfo.json app/index.html app/app.js app/icon.png app/largeIcon.png
 	rm -rf $(BUILD_DIR)
 	mkdir -p $(DATA_DIR)/usr/palm/applications/$(APP_ID)
 
 	# Copy app files
-	cp app/appinfo.json app/index.html app/icon.png app/largeIcon.png \
+	cp app/appinfo.json app/index.html app/app.js app/icon.png app/largeIcon.png \
 	   $(DATA_DIR)/usr/palm/applications/$(APP_ID)/
 
 	# control archive (metadata for opkg)
