@@ -4,6 +4,7 @@ var SCRIPT_PATH = '/var/lib/webosbrew/init.d/set-time';
 var SCRIPT_CONTENT =
   '#!/bin/sh\n' +
   '# alttime: sync system clock on boot\n' +
+  'DEADLINE=${ALTTIME_DEADLINE:-$(($(date +%s) + 300))}\n' +
   'get_ts() {\n' +
   '    TS=$(curl -s -k --max-time 10 https://1.1.1.1/cdn-cgi/trace 2>/dev/null | grep \'^ts=\' | cut -d= -f2 | cut -d. -f1)\n' +
   '    [ -n "$TS" ] && [ "$TS" -gt 1577836800 ] && echo "$TS" && return\n' +
@@ -15,8 +16,8 @@ var SCRIPT_CONTENT =
   'TS=$(get_ts)\n' +
   'if [ -n "$TS" ] && [ "$TS" -gt 1577836800 ]; then\n' +
   '    luna-send -a webosbrew -n 1 luna://com.webos.service.systemservice/time/setSystemTime "{\\"utc\\":$TS}"\n' +
-  'else\n' +
-  '    (sleep 20 && /var/lib/webosbrew/init.d/set-time) &\n' +
+  'elif [ "$(date +%s)" -lt "$DEADLINE" ]; then\n' +
+  '    (sleep 20 && ALTTIME_DEADLINE="$DEADLINE" /var/lib/webosbrew/init.d/set-time) &\n' +
   'fi\n';
 
 // Provider definitions: name, fetch command (outputs unix timestamp to stdout)
@@ -124,7 +125,41 @@ function checkScriptInstalled(callback) {
     }
   );
 }
-checkScriptInstalled(null);
+// ── Root check ────────────────────────────────────────────────────────────
+function checkRoot(callback) {
+  execCommand('id -u',
+    function(result) {
+      var uid = parseInt((result.stdoutString || '').trim(), 10);
+      if (uid === 0) {
+        document.getElementById('root-dot').className = 'dot dot-green';
+        document.getElementById('root-status').textContent = 'Root access OK';
+        callback(true);
+      } else {
+        document.getElementById('root-dot').className = 'dot dot-red';
+        document.getElementById('root-status').textContent = 'Not root (uid ' + uid + ')';
+        setLog('Root access required (running as uid ' + uid + '). Is Homebrew Channel installed?', 'err');
+        disableUI();
+        callback(false);
+      }
+    },
+    function() {
+      document.getElementById('root-dot').className = 'dot dot-red';
+      document.getElementById('root-status').textContent = 'Root check failed';
+      setLog('Could not verify root access. Is Homebrew Channel installed and elevated?', 'err');
+      disableUI();
+      callback(false);
+    }
+  );
+}
+
+function disableUI() {
+  var btns = document.querySelectorAll('button');
+  for (var i = 0; i < btns.length; i++) btns[i].disabled = true;
+}
+
+checkRoot(function(isRoot) {
+  if (isRoot) checkScriptInstalled(null);
+});
 
 // ── Sync time now ─────────────────────────────────────────────────────────
 document.getElementById('btn-sync').addEventListener('click', function() {

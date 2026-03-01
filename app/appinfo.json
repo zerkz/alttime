@@ -5,7 +5,7 @@
   "main": "index.html",
   "icon": "icon.png",
   "largeIcon": "largeIcon.png",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "vendor": "zdware",
   "appDescription": "Syncs system clock via alternate HTTPS sources.",
   "resolution": "1920x1080",
