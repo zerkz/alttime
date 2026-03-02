@@ -1,42 +1,24 @@
 var SCRIPT_PATH = '/var/lib/webosbrew/init.d/set-time';
 
-// Startup script tries all three providers in fallback order
+var APP_DIR = '/media/developer/apps/usr/palm/applications/org.zdware.alttime';
+
+// Startup script uses NTP via node to fetch time, then luna-send to set it
 var SCRIPT_CONTENT =
   '#!/bin/sh\n' +
-  '# alttime: sync system clock on boot\n' +
+  '# alttime: sync system clock on boot via NTP\n' +
   'DEADLINE=${ALTTIME_DEADLINE:-$(($(date +%s) + 300))}\n' +
-  'get_ts() {\n' +
-  '    TS=$(curl -s -k --max-time 10 https://1.1.1.1/cdn-cgi/trace 2>/dev/null | grep \'^ts=\' | cut -d= -f2 | cut -d. -f1)\n' +
-  '    [ -n "$TS" ] && [ "$TS" -gt 1577836800 ] && echo "$TS" && return\n' +
-  '    TS=$(curl -sI -k --max-time 10 https://www.google.com 2>/dev/null | awk \'/^[Dd]ate:/{split($6,t,":");m=index("JanFebMarAprMayJunJulAugSepOctNovDec",$4);mo=int((m+2)/3);d=$3+0;y=$5+0;if(mo<=2){mo+=12;y--};print int((365*y+int(y/4)-int(y/100)+int(y/400)+int(30.6001*(mo+1))+d-719591)*86400+t[1]*3600+t[2]*60+t[3])}\')\n' +
-  '    [ -n "$TS" ] && [ "$TS" -gt 1577836800 ] && echo "$TS" && return\n' +
-  '    TS=$(curl -s -k --max-time 10 https://timeapi.io/api/v1/time/current/unix 2>/dev/null | grep -o \'[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]\' | head -1)\n' +
-  '    [ -n "$TS" ] && [ "$TS" -gt 1577836800 ] && echo "$TS"\n' +
-  '}\n' +
-  'TS=$(get_ts)\n' +
+  'TS=$(node ' + APP_DIR + '/ntp-sync.js)\n' +
   'if [ -n "$TS" ] && [ "$TS" -gt 1577836800 ]; then\n' +
   '    luna-send -a webosbrew -n 1 luna://com.webos.service.systemservice/time/setSystemTime "{\\"utc\\":$TS}"\n' +
   'elif [ "$(date +%s)" -lt "$DEADLINE" ]; then\n' +
   '    (sleep 20 && ALTTIME_DEADLINE="$DEADLINE" /var/lib/webosbrew/init.d/set-time) &\n' +
   'fi\n';
 
-// Provider definitions: name, fetch command (outputs unix timestamp to stdout)
+// NTP server definitions
 var PROVIDERS = [
-  {
-    id: 'cloudflare',
-    name: 'Cloudflare',
-    cmd: "curl -s -k --max-time 10 https://1.1.1.1/cdn-cgi/trace | grep '^ts=' | cut -d= -f2 | cut -d. -f1"
-  },
-  {
-    id: 'google',
-    name: 'Google',
-    cmd: "curl -sI -k --max-time 10 https://www.google.com 2>/dev/null | awk '/^[Dd]ate:/{split($6,t,\":\");m=index(\"JanFebMarAprMayJunJulAugSepOctNovDec\",$4);mo=int((m+2)/3);d=$3+0;y=$5+0;if(mo<=2){mo+=12;y--};print int((365*y+int(y/4)-int(y/100)+int(y/400)+int(30.6001*(mo+1))+d-719591)*86400+t[1]*3600+t[2]*60+t[3])}'"
-  },
-  {
-    id: 'timeapi',
-    name: 'TimeAPI.io',
-    cmd: "curl -s -k --max-time 10 https://timeapi.io/api/v1/time/current/unix | grep -o '[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]' | head -1"
-  }
+  { id: 'google', name: 'Google NTP', server: 'time.google.com' },
+  { id: 'cloudflare', name: 'Cloudflare NTP', server: 'time.cloudflare.com' },
+  { id: 'pool', name: 'NTP Pool', server: 'pool.ntp.org' }
 ];
 
 var selectedProvider = 0; // index into PROVIDERS
@@ -86,9 +68,9 @@ function selectProvider(idx) {
   }
 }
 
-document.getElementById('prov-cloudflare').addEventListener('click', function() { selectProvider(0); });
-document.getElementById('prov-google').addEventListener('click',     function() { selectProvider(1); });
-document.getElementById('prov-timeapi').addEventListener('click',    function() { selectProvider(2); });
+document.getElementById('prov-google').addEventListener('click',     function() { selectProvider(0); });
+document.getElementById('prov-cloudflare').addEventListener('click', function() { selectProvider(1); });
+document.getElementById('prov-pool').addEventListener('click',       function() { selectProvider(2); });
 
 // ── Clock display ─────────────────────────────────────────────────────────
 function pad(n) { return n < 10 ? '0' + n : '' + n; }
@@ -165,7 +147,7 @@ checkRoot(function(isRoot) {
 document.getElementById('btn-sync').addEventListener('click', function() {
   var prov = PROVIDERS[selectedProvider];
   setLog('Fetching time from ' + prov.name + '...', 'busy');
-  execCommand(prov.cmd,
+  execCommand('node ' + APP_DIR + '/ntp-sync.js ' + prov.server,
     function(result) {
       var ts = parseInt((result.stdoutString || '').trim(), 10);
       if (!ts || ts < 1577836800) {

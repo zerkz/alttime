@@ -10,12 +10,12 @@ DATA_DIR    := $(BUILD_DIR)/data
 
 all: $(IPK)
 
-$(IPK): app/appinfo.json app/index.html app/app.js app/icon.png app/largeIcon.png
+$(IPK): app/appinfo.json app/index.html app/app.js app/ntp.js app/ntp-sync.js app/icon.png app/largeIcon.png
 	rm -rf $(BUILD_DIR)
 	mkdir -p $(DATA_DIR)/usr/palm/applications/$(APP_ID)
 
 	# Copy app files
-	cp app/appinfo.json app/index.html app/app.js app/icon.png app/largeIcon.png \
+	cp app/appinfo.json app/index.html app/app.js app/ntp.js app/ntp-sync.js app/icon.png app/largeIcon.png \
 	   $(DATA_DIR)/usr/palm/applications/$(APP_ID)/
 
 	# control archive (metadata for opkg)
